@@ -120,7 +120,7 @@ impl Transpiler {
                     .iter()
                     .flat_map(|s| s.lines().map(|l| format!("    {}", l)).collect::<Vec<_>>())
                     .collect();
-                format!("if not ({}):\n{}", cond_str, indented.join("\n"))
+                format!("if {}:\n{}", cond_str, indented.join("\n"))
             }
 
             Stmt::While { cond, body, line_no: _ } => {
@@ -132,7 +132,7 @@ impl Transpiler {
                     .iter()
                     .flat_map(|s| s.lines().map(|l| format!("    {}", l)).collect::<Vec<_>>())
                     .collect();
-                format!("while not ({}):\n{}", cond_str, indented.join("\n"))
+                format!("while {}:\n{}", cond_str, indented.join("\n"))
             }
 
             Stmt::Defun {

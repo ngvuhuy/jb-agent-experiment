@@ -581,6 +581,10 @@ impl Parser {
                 let expr = self.parse_primary();
                 Expr::BinOp(Box::new(Expr::Int(0)), BinOp::Sub, Box::new(expr))
             }
+            Some(TokenKind::Plus) => {
+                self.advance();
+                self.parse_primary()
+            }
             Some(ref t) => {
                 err!("error: Line {}: unexpected {:?}", self.peek().map(|t| t.line).unwrap_or(0), t);
             }
