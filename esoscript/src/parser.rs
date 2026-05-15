@@ -28,6 +28,7 @@ pub enum TokenKind {
     Star,
     Slash,
     StarStar,
+    Percent,
     Equals,
     Eq,
     Neq,
@@ -183,6 +184,7 @@ fn tokenize(source: &str) -> Vec<Token> {
                         }
                     }
                     '/' => tokens.push(Token { kind: TokenKind::Slash, line: line_no }),
+                    '%' => tokens.push(Token { kind: TokenKind::Percent, line: line_no }),
                     '=' => {
                         if chars.peek() == Some(&'=') {
                             chars.next();
@@ -221,6 +223,11 @@ fn tokenize(source: &str) -> Vec<Token> {
                     '}' => tokens.push(Token { kind: TokenKind::RBrace, line: line_no }),
                     ':' => tokens.push(Token { kind: TokenKind::Colon, line: line_no }),
                     ',' => tokens.push(Token { kind: TokenKind::Comma, line: line_no }),
+                    '#' => {
+                        while chars.peek().is_some() {
+                            chars.next();
+                        }
+                    }
                     ' ' | '\t' | '\r' => {}
                     _ => err!("error: Line {}: unexpected character '{}'", line_no, ch),
                 }
@@ -523,6 +530,7 @@ impl Parser {
             let op = match self.peek().map(|t| &t.kind) {
                 Some(TokenKind::Star) => BinOp::Mul,
                 Some(TokenKind::Slash) => BinOp::Div,
+                Some(TokenKind::Percent) => BinOp::Mod,
                 Some(TokenKind::StarStar) => BinOp::Pow,
                 _ => break,
             };

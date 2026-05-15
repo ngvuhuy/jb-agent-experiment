@@ -269,6 +269,7 @@ impl Transpiler {
                     BinOp::Sub => "-",
                     BinOp::Mul => "*",
                     BinOp::Div => "/",
+                    BinOp::Mod => "%",
                     BinOp::Pow => "**",
                     BinOp::Eq => "==",
                     BinOp::Neq => "!=",
