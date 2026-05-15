@@ -3,19 +3,29 @@ use std::process::{Command, Stdio};
 use crate::runtime::RUNTIME;
 
 pub fn execute(python_code: &str) -> Result<(), String> {
-    let full = format!("{}\n{}", RUNTIME, python_code);
+    let wrapped = format!(
+        "{}try:\n{}\nexcept BaseException:\n    sys.exit(1)\n",
+        RUNTIME,
+        python_code
+            .lines()
+            .map(|l| format!("    {}", l))
+            .collect::<Vec<_>>()
+            .join("\n"),
+    );
 
-    let status = Command::new("python3")
+    let mut child = Command::new("python3")
         .arg("-c")
-        .arg(&full)
+        .arg(&wrapped)
         .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .status()
+        .stderr(Stdio::null())
+        .spawn()
         .map_err(|e| format!("Failed to run python3: {}", e))?;
+
+    let status = child.wait().map_err(|e| format!("Failed to wait for python3: {}", e))?;
 
     if !status.success() {
         let code = status.code().unwrap_or(-1);
-        return Err(format!("python3 exited with code {}", code));
+        return Err(format!("runtime error (code {})", code));
     }
 
     Ok(())

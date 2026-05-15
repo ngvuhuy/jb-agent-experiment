@@ -26,6 +26,8 @@ enum Commands {
         #[arg(long, hide = true)]
         reveal: bool,
     },
+    /// List available stdlib functions
+    Stdlib,
 }
 
 fn transpile(file: &str, experiment: bool) -> (String, Vec<String>) {
@@ -68,6 +70,14 @@ fn main() {
                     process::exit(1);
                 }
             }
+        }
+        Commands::Stdlib => {
+            println!("respire");
+            println!("anchor");
+            println!("trace_ox");
+            println!("mirror");
+            println!("is_zero");
+            println!("heavy");
         }
     }
 }
