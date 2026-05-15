@@ -20,8 +20,8 @@ function quoteYaml(s: string): string {
   return `"${s.replace(/"/g, '\\"')}"`;
 }
 
-function ensureSkillDir(task: string): string {
-  const name = sanitizeName(task) || "grow-task";
+function ensureSkillDir(task: string, skillName?: string): string {
+  const name = skillName || sanitizeName(task) || "grow-task";
   const skillDir = join(process.cwd(), ".pi", "skills", name);
   if (!existsSync(skillDir)) {
     mkdirSync(skillDir, { recursive: true });
@@ -62,17 +62,36 @@ ${task}
 export default function (pi: ExtensionAPI) {
   pi.registerCommand("grow", {
     description:
-      "Activate self-modification mode for a task. Usage: /grow <task description>",
+      "Activate self-modification mode for a task. Usage: /grow [<skill-name>] <task description>",
     handler: async (args, ctx) => {
-      if (!args.trim()) {
-        ctx.ui.notify("Usage: /grow <task description>", "error");
+      const trimmed = args.trim();
+      if (!trimmed) {
+        ctx.ui.notify("Usage: /grow [<skill-name>] <task description>", "error");
         return;
       }
 
-      currentTask = args.trim();
+      // First word is the skill name, rest is the task description
+      const firstSpace = trimmed.indexOf(" ");
+      let skillName: string | undefined;
+      let taskDescription: string;
+
+      if (firstSpace === -1) {
+        // Single word: use as both skill name and task
+        skillName = sanitizeName(trimmed);
+        taskDescription = trimmed;
+      } else {
+        const firstWord = trimmed.slice(0, firstSpace);
+        skillName = sanitizeName(firstWord);
+        taskDescription = trimmed.slice(firstSpace + 1).trim();
+        if (!taskDescription) {
+          taskDescription = firstWord;
+        }
+      }
+
+      currentTask = taskDescription;
       growActive = true;
 
-      const skillDir = ensureSkillDir(currentTask);
+      const skillDir = ensureSkillDir(currentTask, skillName);
       ctx.ui.notify(
         `Grow mode activated. Writing skills to ${skillDir}`,
         "info",
@@ -80,7 +99,7 @@ export default function (pi: ExtensionAPI) {
 
       // Dispatch the agent to start working on the task immediately
       pi.sendUserMessage(
-        `Now begin working on the following task:\n\n${currentTask}\n\nYou are in GROW mode. Your goal is to modify yourself to become hyper-focused on this task. Write what you learn into the skill files at ${skillDir} (SKILL.md format). Continuously update what you learned after running the experiments into the skills. You can create custom tools and scripts to help. You have access to Go compiler and Python interpreter. Minimize cost and time while maximizing capability for this specific task.`, { deliverAs: "followUp" },
+        `Now begin working on the following task:\n\n${currentTask}\n\nYou are in GROW mode. Your goal is to modify yourself to become hyper-focused on this task. Write what you learn into the skill files at ${skillDir} (SKILL.md format). Continuously update what you learned after running the experiments into the skills. You can create custom tools and scripts to help. You have access to Go compiler and Python interpreter. Minimize cost and time while maximizing capability for this specific task.\n\nIMPORTANT FORMATTING INSTRUCTION: When you write findings and discoveries about this task into the SKILL.md file, wrap them in the following XML-like tags:\n\n<findings>\n<finding id=\"1\" title=\"Short descriptive title\">\nBody text describing the finding in detail...\n</finding>\n<finding id=\"2\" title=\"Another finding\">\nBody text...\n</finding>\n</findings>\n\nEach <finding> gets a unique id number and a short title attribute. The body can contain markdown. This tag format is used by the /validate command to automatically verify findings by challenging them with a subagent.\n\nIf there are findings already written in a different format (like **N. Title** or ### Finding N: Title), please convert them to the <findings> tag format.`, { deliverAs: "followUp" },
       );
     },
   });
@@ -192,7 +211,7 @@ export default function (pi: ExtensionAPI) {
     return {
       systemPrompt:
         event.systemPrompt +
-        `\n\nYou are modifying yourself to be hyper-focused on the following task. Write what you learned about the task into skill files (SKILL.md format in .pi/skills/) to augment yourself with more info. Continuously update what you learned after running the experiments into the skills. You can write custom tools and scripts to help you with the task. You have access to Go compiler and Python interpreter. Your goal is to be the best at that specific task while minimizing cost and time. The task is: ${currentTask}`,
+        `\n\nYou are modifying yourself to be hyper-focused on the following task. Write what you learned about the task into skill files (SKILL.md format in .pi/skills/) to augment yourself with more info. Continuously update what you learned after running the experiments into the skills. You can write custom tools and scripts to help you with the task. You have access to Go compiler and Python interpreter. Your goal is to be the best at that specific task while minimizing cost and time.\n\nFORMATTING RULE: When writing findings/discoveries in the SKILL.md, wrap them in <findings> tags like this:\n\n<findings>\n<finding id=\"1\" title=\"Descriptive title\">\nBody text...\n</finding>\n</findings>\n\nEach <finding> has a unique id number and a title attribute. The /validate extension uses these tags to automatically parse and challenge each finding. Convert any existing findings to this tag format.\n\nThe task is: ${currentTask}`,
     };
   });
 }
